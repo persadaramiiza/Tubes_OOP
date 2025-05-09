@@ -8,6 +8,7 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.util.Objects;
 
 public class Player extends  Entity{
     GamePanel gp;
@@ -51,7 +52,7 @@ public class Player extends  Entity{
         UtilityTool utilityTool = new UtilityTool();
         BufferedImage image = null;
         try {
-            image = ImageIO.read(getClass().getResourceAsStream("/player/" + imageName + ".png"));
+            image = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/player/" + imageName + ".png")));
             image = utilityTool.scaleImage(image, gp.tileSize, gp.tileSize);
         }catch (IOException e){
             System.out.println(e.getMessage());
@@ -60,8 +61,8 @@ public class Player extends  Entity{
     }
 
     public void setDefaultValues(){
-        worldX = gp.tileSize * 13;
-        worldY = gp.tileSize * 27;
+        worldX = gp.tileSize * 21;
+        worldY = gp.tileSize * 26;
         speed = 4;
         direction = "down";
     }
