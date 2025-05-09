@@ -135,6 +135,14 @@ public class Player extends  Entity{
                     speed += 10;
                     gp.obj[i] = null;
                     break;
+
+                case "Chest":
+                    if(hasKey > 0){
+                        gp.playSE(1);
+                        gp.obj[i] = null;
+                        hasKey--;
+                    }
+                    System.out.println("Key: " + hasKey);
             }
         }
     }

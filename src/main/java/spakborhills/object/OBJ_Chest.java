@@ -1,7 +1,6 @@
 package spakborhills.object;
 
 import spakborhills.GamePanel;
-
 import javax.imageio.ImageIO;
 import java.io.IOException;
 
@@ -15,5 +14,6 @@ public class OBJ_Chest extends SuperObject{
         }catch (IOException e){
             System.out.println(e.getMessage());
         }
+        collision =true;
     }
 }
