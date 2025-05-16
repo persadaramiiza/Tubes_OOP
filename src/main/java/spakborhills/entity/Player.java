@@ -11,15 +11,12 @@ import java.io.IOException;
 import java.util.Objects;
 
 public class Player extends  Entity{
-    GamePanel gp;
     KeyHandler keyH;
 
     public final int screenX;
     public final int screenY;
-    int hasKey = 0;
-
     public Player(GamePanel gp, KeyHandler keyH){
-        this.gp = gp;
+        super(gp);
         this.keyH = keyH;
 
         screenX = gp.screenWidth / 2 - (gp.tileSize / 2);
@@ -112,38 +109,7 @@ public class Player extends  Entity{
 
     public void pickUpObject(int i){
         if (i != 999){
-            String objectName = gp.obj[i].name;
 
-            switch (objectName){
-                case "Key":
-                    gp.playSE(1);
-                    hasKey++;
-                    gp.obj[i] = null;
-                    System.out.println("Key: " + hasKey);
-                    break;
-                case "Door":
-                    if(hasKey > 0){
-                        gp.playSE(4);
-                        gp.obj[i] = null;
-                        hasKey--;
-                    }
-                    System.out.println("Key: " + hasKey);
-                    break;
-
-                case "Boots":
-                    gp.playSE(2);
-                    speed += 10;
-                    gp.obj[i] = null;
-                    break;
-
-                case "Chest":
-                    if(hasKey > 0){
-                        gp.playSE(1);
-                        gp.obj[i] = null;
-                        hasKey--;
-                    }
-                    System.out.println("Key: " + hasKey);
-            }
         }
     }
 
