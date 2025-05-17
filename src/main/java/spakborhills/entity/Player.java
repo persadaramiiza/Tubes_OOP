@@ -2,19 +2,17 @@ package spakborhills.entity;
 
 import spakborhills.GamePanel;
 import spakborhills.KeyHandler;
-import spakborhills.UtilityTool;
-
-import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.IOException;
-import java.util.Objects;
+
 
 public class Player extends  Entity{
     KeyHandler keyH;
-
     public final int screenX;
     public final int screenY;
+    public int maxEnergy;
+    public int currentEnergy;
+
     public Player(GamePanel gp, KeyHandler keyH){
         super(gp);
         this.keyH = keyH;
@@ -32,29 +30,18 @@ public class Player extends  Entity{
 
         setDefaultValues();
         getPlayerImage();
-
+        setDefaultEnergy();
     }
 
     public void getPlayerImage(){
-        up1 = setup("boy_up_1");
-        up2 = setup("boy_up_2");
-        down1 = setup("boy_down_1");
-        down2 = setup("boy_down_2");
-        left1 = setup("boy_left_1");
-        left2 = setup("boy_left_2");
-        right1 = setup("boy_right_1");
-        right2 = setup("boy_right_2");
-    }
-    public BufferedImage setup(String imageName){
-        UtilityTool utilityTool = new UtilityTool();
-        BufferedImage image = null;
-        try {
-            image = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/player/" + imageName + ".png")));
-            image = utilityTool.scaleImage(image, gp.tileSize, gp.tileSize);
-        }catch (IOException e){
-            System.out.println(e.getMessage());
-        }
-        return image;
+        up1 = setup("/player/boy_up_1");
+        up2 = setup("/player/boy_up_2");
+        down1 = setup("/player/boy_down_1");
+        down2 = setup("/player/boy_down_2");
+        left1 = setup("/player/boy_left_1");
+        left2 = setup("/player/boy_left_2");
+        right1 = setup("/player/boy_right_1");
+        right2 = setup("/player/boy_right_2");
     }
 
     public void setDefaultValues(){
@@ -62,6 +49,25 @@ public class Player extends  Entity{
         worldY = gp.tileSize * 26;
         speed = 4;
         direction = "down";
+    }
+
+    public void setDefaultEnergy(){
+        maxEnergy = 100;
+        currentEnergy = maxEnergy;
+    }
+
+    public void decreaseEnergy(int amount){
+        currentEnergy -= amount;
+        if (currentEnergy < 0){
+            currentEnergy = 0;
+        }
+    }
+
+    public void increaseEnergy(int amount){
+        currentEnergy += amount;
+        if (currentEnergy > maxEnergy){
+            currentEnergy = maxEnergy;
+        }
     }
 
     private void updateDirection(){
@@ -93,6 +99,8 @@ public class Player extends  Entity{
 
         // Check object collision
         int objIndex = gp.collisionChecker.checkObject(this,true);
+        int npcIndex = gp.collisionChecker.checkEntity(this, gp.npc);
+        interactNPC(npcIndex);
         pickUpObject(objIndex);
 
         //IF COLLISION FALSE, PLAYER CAN MOVE
@@ -106,6 +114,15 @@ public class Player extends  Entity{
         }
     }
 
+    public void interactNPC(int i){
+        if (i != 999){
+            if(gp.keyH.enterPressed){
+                gp.gameState = gp.dialogueState;
+                gp.npc.get(i).speak();
+            }
+        }
+        gp.keyH.enterPressed = false;
+    }
 
     public void pickUpObject(int i){
         if (i != 999){

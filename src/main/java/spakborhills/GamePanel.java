@@ -1,17 +1,18 @@
 package spakborhills;
 
+import spakborhills.entity.Entity;
 import spakborhills.entity.Player;
 import spakborhills.Tile.TileManager;
 import spakborhills.object.SuperObject;
 
 import  javax.swing.JPanel;
 import java.awt.*;
+import java.util.ArrayList;
 
 public class GamePanel extends  JPanel implements Runnable {
-
+    // GAME WINDOW
     final int originalTileSize = 16;
     final int scale = 3;
-
     public final int tileSize = originalTileSize * scale; //48x48 tile
     public final int maxScreenCol = 16;
     public final int maxScreenRow = 12;
@@ -26,7 +27,7 @@ public class GamePanel extends  JPanel implements Runnable {
     final int fps = 60;
 
     //SYSTEM
-    KeyHandler keyH = new KeyHandler(this);
+    public KeyHandler keyH = new KeyHandler(this);
     Sound music = new Sound();
     Sound se = new Sound();
     TileManager tileManager = new TileManager(this);
@@ -34,16 +35,19 @@ public class GamePanel extends  JPanel implements Runnable {
     public CollisionChecker collisionChecker = new CollisionChecker(this);
     public UI ui = new UI(this);
     Thread gameThread;
+    public  EventHandler eventHandler = new EventHandler(this);
 
     //Entity & OBJECT
     public Player player = new Player(this, keyH);
-    public SuperObject[] obj = new SuperObject[10];
+    public ArrayList<SuperObject> obj = new ArrayList<>();
+    public ArrayList<Entity> npc = new ArrayList<>();
 
     //GAME STATE
     public int gameState;
+    public final int titleState = 0;
     public final int playState = 1;
     public final int pauseState = 2;
-
+    public final int dialogueState = 3;
 
     public GamePanel(){
         this.setPreferredSize(new Dimension(screenWidth, screenHeight));
@@ -55,9 +59,8 @@ public class GamePanel extends  JPanel implements Runnable {
 
     public void setupGame(){
         assetSetter.setObject();
-        playMusic(0);
-
-        gameState = playState;
+        assetSetter.setNPC();
+        gameState = titleState;
     }
     public void startGameThread(){
         gameThread = new Thread(this);
@@ -95,7 +98,12 @@ public class GamePanel extends  JPanel implements Runnable {
 
     public void update(){
         if (gameState == playState){
+            //PLAYER
             player.update();
+            //NPC
+            for(Entity character: npc){
+                character.update();
+            }
         }
         if (gameState == pauseState){
             // nothing
@@ -104,22 +112,30 @@ public class GamePanel extends  JPanel implements Runnable {
     public void paintComponent(Graphics g){
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
-        //Tiles
-        tileManager.draw(g2);
-        //Objects
-        for (SuperObject superObject : obj) {
-            if (superObject != null) {
+
+        // TITLE SCREEN
+        if (gameState == titleState){
+            ui.draw(g2);
+        }
+        else {
+            // TILES
+            tileManager.draw(g2);
+
+            //Objects
+            for (SuperObject superObject : obj) {
                 superObject.draw(g2, this);
             }
+            //NPC
+            for(Entity character: npc){
+                character.draw(g2);
+            }
+            //Player
+            player.draw(g2);
+            //UI
+            ui.draw(g2);
         }
-        //Player
-        player.draw(g2);
-        //UI
-        ui.draw(g2);
-
         g2.dispose();
     }
-
     public void playMusic(int i){
         music.setFile(i);
         music.play();
