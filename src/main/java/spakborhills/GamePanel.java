@@ -3,11 +3,12 @@ package spakborhills;
 import spakborhills.entity.Entity;
 import spakborhills.entity.Player;
 import spakborhills.Tile.TileManager;
-import spakborhills.object.SuperObject;
+import spakborhills.enums.EntityType;
 
-import  javax.swing.JPanel;
+import javax.swing.JPanel;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.Comparator;
 
 public class GamePanel extends  JPanel implements Runnable {
     // GAME WINDOW
@@ -33,14 +34,17 @@ public class GamePanel extends  JPanel implements Runnable {
     TileManager tileManager = new TileManager(this);
     public AssetSetter assetSetter = new AssetSetter(this);
     public CollisionChecker collisionChecker = new CollisionChecker(this);
-    public UI ui = new UI(this);
+    public UI ui;
     Thread gameThread;
-    public  EventHandler eventHandler = new EventHandler(this);
+
+    private Time time;
+    private Weather weather;
+    public GameClock gameClock;
 
     //Entity & OBJECT
     public Player player = new Player(this, keyH);
-    public ArrayList<SuperObject> obj = new ArrayList<>();
-    public ArrayList<Entity> npc = new ArrayList<>();
+    public ArrayList<Entity> entities = new ArrayList<>();
+    public Entity currentInteractingNPC = null;
 
     //GAME STATE
     public int gameState;
@@ -48,6 +52,8 @@ public class GamePanel extends  JPanel implements Runnable {
     public final int playState = 1;
     public final int pauseState = 2;
     public final int dialogueState = 3;
+    public final int inventoryState = 4;
+    public final int farmNameInputState = 5;
 
     public GamePanel(){
         this.setPreferredSize(new Dimension(screenWidth, screenHeight));
@@ -58,13 +64,42 @@ public class GamePanel extends  JPanel implements Runnable {
     }
 
     public void setupGame(){
-        assetSetter.setObject();
         assetSetter.setNPC();
+        assetSetter.setObject();
         gameState = titleState;
     }
+
     public void startGameThread(){
         gameThread = new Thread(this);
-        gameThread.start();
+        gameThread.start(); // Mulai thread utama game
+
+        // Mulai GameClock thread di sini jika belum berjalan dan sudah di-set
+        if (gameClock != null && !gameClock.isAlive()) { // (A)
+            try {
+                System.out.println("[GamePanel] Attempting to start GameClock thread..."); // Tambahkan log
+                gameClock.start(); // << HANYA PANGGIL SEKALI DI SINI
+                System.out.println("[GamePanel] GameClock thread started successfully."); // Tambahkan log
+            } catch (IllegalThreadStateException e) {
+                System.err.println("[GamePanel] GameClock thread may have already been started: " + e.getMessage());
+            }
+        } else if (gameClock != null) {
+            System.out.println("[GamePanel] GameClock thread was already alive."); // Tambahkan log
+        } else {
+            System.err.println("[GamePanel] GameClock is null, cannot start."); // Tambahkan log
+        }
+    }
+
+    public void setTime(Time time) {
+        this.time = time;
+    }
+
+    public void setWeather(Weather weather) {
+        this.weather = weather;
+    }
+
+    public void setGameClock(GameClock gameClock) {
+        this.gameClock = gameClock;
+        this.ui = new UI(this, gameClock);
     }
 
     public void run(){
@@ -98,16 +133,100 @@ public class GamePanel extends  JPanel implements Runnable {
 
     public void update(){
         if (gameState == playState){
-            //PLAYER
-            player.update();
+            player.update(); // Update player
             //NPC
-            for(Entity character: npc){
-                character.update();
+            for(Entity character: entities){ // Pastikan entities adalah daftar NPC, bukan semua entitas termasuk objek
+                if (character.type == EntityType.NPC) { // Hanya update NPC
+                    character.update();
+                }
+            }
+            if (gameClock != null && gameClock.isPaused()) { // Jika game masuk playState dan clock masih pause
+                gameClock.resumeTime();
+            }
+        } else if (gameState == pauseState){
+            // nothing, waktu sudah di-pause oleh KeyHandler
+        } else if (gameState == dialogueState) {
+            // Waktu mungkin di-pause saat dialog dimulai (misalnya di Player.interactNPC)
+            // dan di-resume saat dialog selesai (di KeyHandler atau Player.interactNPC)
+        } else if (gameState == inventoryState) {
+            // Waktu di-pause oleh KeyHandler saat inventaris dibuka
+        } else if (gameState == farmNameInputState) {
+            // Tidak ada update game logic yang signifikan di sini selain menunggu input.
+            // GameClock idealnya di-pause di state ini.
+            if (this.gameClock != null && !this.gameClock.isPaused()) {
+                this.gameClock.pauseTime(); // Pastikan waktu dijeda
+            }
+
+            if (keyH.enterPressed) { // Jika Enter ditekan untuk konfirmasi nama farm
+                String finalFarmName = ui.farmNameInput.trim();
+                if (!finalFarmName.isEmpty()) {
+                    // Pindahkan logika player.setFarmName setelah resetGameForNewGame
+                    // agar tidak tertimpa oleh setDefaultValues() di dalam reset.
+
+                    resetGameForNewGame(); // Reset SEMUA state game untuk NEW GAME
+                    player.setFarmName(finalFarmName); // Set nama farm setelah player direset
+
+                    System.out.println("Farm Name Confirmed: " + player.getFarmName()); // Untuk Debug
+                    gameState = playState; // Pindah ke play state
+
+                    // Mulai/Lanjutkan musik dan GameClock
+                    playMusic(0); // Nomor trek musik untuk playState
+                    if(gameClock != null) {
+                        // gameClock.start() HANYA dipanggil sekali saat game pertama kali setup.
+                        // Jika gameClock sudah pernah start dan sekarang di-pause, gunakan resumeTime.
+                        if (gameClock.isAlive() && gameClock.isPaused()) {
+                            gameClock.resumeTime();
+                        } else if (!gameClock.isAlive()) {
+                            // Ini seharusnya tidak terjadi jika gameClock sudah di-start di startGameThread
+                            System.err.println("GameClock was not alive. Attempting to start.");
+                            try {
+                                gameClock.start();
+                            } catch (IllegalThreadStateException e) {
+                                System.err.println("GameClock already started: " + e.getMessage());
+                            }
+                        }
+                    }
+                } else {
+                    ui.showMessage("Farm name cannot be empty!");
+                }
+                keyH.enterPressed = false; // Reset flag enter setelah diproses di sini
             }
         }
-        if (gameState == pauseState){
-            // nothing
+    }
+
+    public void resetGameForNewGame() {
+        // 1. Reset Player
+        player.setFarmName(ui.farmNameInput.trim()); // Set nama farm yang baru diinput setelah default// Berikan item awal
+        entities.clear();
+
+        // 2. Reset NPC (jika perlu, misalnya posisi atau dialog awal)
+        assetSetter.setNPC(); // Atau metode reset NPC spesifik
+
+        // 3. Reset Objek di map (jika ada yang berubah selama game sebelumnya)
+        assetSetter.setObject(); // Atau metode reset objek spesifik
+
+        // 4. Reset Waktu Game (GameClock)
+        if (gameClock != null) { // Asumsi Anda punya objek GameClock
+            gameClock.resetTime(); // Buat metode reset di GameClock (misal, ke hari 1, musim Spring, jam 06:00)
+        } else {
+            // Jika tidak ada GameClock, inisialisasi waktu default di sini atau di Player/GamePanel
+            // time.reset() atau sejenisnya
         }
+
+
+        // 5. Reset Kondisi Ladang (jika sudah ada sistem farming)
+        // tileM.resetFarmTiles(); // Misalnya
+
+        // 6. Reset UI elemen yang mungkin menyimpan state lama
+        ui.currentDialogue = "";
+        ui.farmNameInput = ""; // Sudah di-reset saat transisi ke farmNameInputState
+        ui.commandNumber = 0; // Reset command di title screen
+
+        // 7. Hentikan musik title screen (jika ada) dan mulai musik play state
+        // stopMusic();
+        // playMusic(soundEffectMusic); // Ganti dengan indeks musik play state Anda
+
+        System.out.println("Game has been reset for a new game.");
     }
     public void paintComponent(Graphics g){
         super.paintComponent(g);
@@ -121,12 +240,14 @@ public class GamePanel extends  JPanel implements Runnable {
             // TILES
             tileManager.draw(g2);
 
-            //Objects
-            for (SuperObject superObject : obj) {
-                superObject.draw(g2, this);
-            }
-            //NPC
-            for(Entity character: npc){
+            entities.sort(new Comparator<Entity>() {
+                @Override
+                public int compare(Entity o1, Entity o2) {
+                    return Integer.compare(o1.worldY, o2.worldY);
+                }
+            });
+            // Entities
+            for(Entity character: entities){
                 character.draw(g2);
             }
             //Player
@@ -136,6 +257,7 @@ public class GamePanel extends  JPanel implements Runnable {
         }
         g2.dispose();
     }
+
     public void playMusic(int i){
         music.setFile(i);
         music.play();

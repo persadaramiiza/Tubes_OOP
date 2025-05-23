@@ -1,7 +1,6 @@
     package spakborhills.Tile;
 
     import spakborhills.GamePanel;
-    import spakborhills.UtilityTool;
 
     import javax.imageio.ImageIO;
     import java.awt.*;
@@ -21,7 +20,7 @@
         public TileManager(GamePanel gp){
             this.gp = gp;
 
-            InputStream inputStream = getClass().getResourceAsStream("/maps/oceantiledata.txt");
+            InputStream inputStream = getClass().getResourceAsStream("/maps/forest_river_data.txt");
             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
 
             //Getting Tile Name and Collision Info
@@ -39,7 +38,7 @@
             getTilesImage();
 
             //Get maxWorldCol & maxWorldRow
-            inputStream = getClass().getResourceAsStream("/maps/ocean.txt");
+            inputStream = getClass().getResourceAsStream("/maps/forest_river.txt");
             bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
 
 
@@ -54,7 +53,7 @@
             }catch (IOException e){
                 System.out.println(e.getMessage());
             }
-            loadMap("/maps/ocean.txt");
+            loadMap("/maps/forest_river.txt");
         }
         public void getTilesImage(){
             for(int i  = 0; i < fileNames.size(); i++){
@@ -71,10 +70,9 @@
         }
 
         public void setup(int index, String imagePath, boolean collision){
-            UtilityTool utilityTool = new UtilityTool();
             try {
                 tile[index] = new Tile();
-                tile[index].image = ImageIO.read(getClass().getResourceAsStream("/asset/map_resources/ocean/" + imagePath));
+                tile[index].image = ImageIO.read(getClass().getResourceAsStream("/asset/map_resources/forest_river/" + imagePath));
                 tile[index].collision = collision;
                 
             } catch (IOException e) {
